@@ -35,6 +35,7 @@ typedef struct client {
     struct client *next;
     Bool isurgent;
     Window win;
+    const char *class;
 } client;
 
 typedef struct {
@@ -50,10 +51,11 @@ typedef struct {
     const char *class;
     const int desktop;
     const Bool follow;
+    const Bool fetch;
 } AppRule;
 
 /* Functions */
-static void add_window(Window w);
+static void add_window(Window w, const char *class);
 static void buttonpressed(XEvent *e);
 static void change_desktop(const Arg *arg);
 static void cleanup(void);
@@ -132,7 +134,7 @@ static void (*events[LASTEvent])(XEvent *e) = {
     [PropertyNotify] = propertynotify,
 };
 
-void add_window(Window w) {
+void add_window(Window w, const char *class) {
     client *c, *t;
     if (!(c = (client *)calloc(1, sizeof(client))))
         die("error: could not calloc() %u bytes\n", sizeof(client));
@@ -147,6 +149,7 @@ void add_window(Window w) {
     }
 
     c->win = w;
+    c->class = class;
     current = c;
     save_desktop(current_desktop);
     XSelectInput(dis, c->win, PropertyChangeMask);
@@ -200,7 +203,7 @@ void client_to_desktop(const Arg *arg) {
     int cd = current_desktop;
 
     select_desktop(arg->i);
-    add_window(c->win);
+    add_window(c->win, c->class);
     save_desktop(arg->i);
 
     select_desktop(cd);
@@ -338,29 +341,40 @@ void maprequest(XEvent *e) {
     if (wintoclient(ev->window)) return;
 
     Window trans;
-    Bool follow = False, winistrans = XGetTransientForHint(dis, ev->window, &trans) && trans;
+    Bool winistrans = XGetTransientForHint(dis, ev->window, &trans) && trans;
+    Bool follow = False, fetch = False, found = False;
+    const char *class = "broken";
+    int d, cd, newdsk;
+    save_desktop(cd = newdsk = current_desktop);
 
-    int cd = current_desktop, newdsk = current_desktop;
     XClassHint ch = {0, 0};
     if (!winistrans && XGetClassHint(dis, ev->window, &ch))
         for (unsigned int i=0; i<LENGTH(rules); i++)
             if (!strcmp(ch.res_class, rules[i].class) || !strcmp(ch.res_name, rules[i].class)) {
-                follow = rules[i].follow;
-                newdsk = rules[i].desktop;
+                class = rules[i].class;
+                if ((fetch = rules[i].fetch))
+                    for (select_desktop(d=0); d<DESKTOPS && !found;)
+                        for (select_desktop(d++), current=head; current; current=current->next)
+                            if ((found = !strcmp(class, current->class))) break;
+                if ((follow = rules[i].follow) || !fetch) newdsk = rules[i].desktop;
                 break;
             }
     if (ch.res_class) XFree(ch.res_class);
     if (ch.res_name) XFree(ch.res_name);
 
-    save_desktop(cd);
-    select_desktop(newdsk);
-    add_window(ev->window);
-    select_desktop(cd);
-    if (cd == newdsk) {
+    if (fetch && found) {
+        client_to_desktop(&(Arg){.i = newdsk});
+        deletewindow(ev->window);
+    } else {
+        select_desktop(newdsk);
+        add_window(ev->window, class);
         if (!winistrans) tile();
-        XMapWindow(dis, ev->window);
+        if ((!found && cd == newdsk) || follow || fetch) XMapWindow(dis, ev->window);
         update_current();
-    } else if (follow) change_desktop(&(Arg){.i = newdsk});
+    }
+    select_desktop(cd);
+    if (follow) change_desktop(&(Arg){.i = newdsk});
+
     desktopinfo();
 }
 

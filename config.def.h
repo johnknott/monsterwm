@@ -29,10 +29,29 @@
 #define MINWSZ          50        /* minimum window size in pixels */
 
 /** open applications to specified desktop **/
+/*
+ * desktop is the desktop in which the application with the given class/classname will be spawned,
+ *         if follow is set or fetch is not set. if fetch is set then the current desktop is used.
+ *         desktop index starts from 0.
+ * follow  means that the application with the given class will be spawned on the given desktop,
+ *         and desktop focus will change to that desktop.
+ * fetch   means that if an application with the given class is already open, it will be moved to
+ *         the specified desktop, if follow is set, otherwise to the current desktop
+ *
+ * in the example below:
+ *   if app1 isn't opened, it will open on desktop 0 and desktop focus will change to that desktop
+ *   if app1 is open, then it will be moved to desktop 0 and the focus will change to that desktop
+ *   app2 will open on desktop 1, and desktop focus will change to that desktop
+ *   if app3 isn't opened, it will be opened on the current desktop
+ *   if app3 is open, then, it will be moved to the current desktop
+ *   app4 will open on desktop 3, and focus will stay on current desktop
+ */
 static const AppRule rules[] = { \
-    /*  class      desktop    follow */  /* desktop index starts from 0 */
-    { "MPlayer",      3,       True  },  /* if there are 4 desktops, 3 is the  */
-    { "Chromium",     0,       False },  /* last desktop, 0 is always the fist */
+    /* class    desktop   follow   fetch  */
+    { "app1",      0,     True,    True,  },
+    { "app2",      1,     True,    False, },
+    { "app3",      2,     False,   True,  },
+    { "app4",      3,     False,   False, },
 };
 
 /* helper for spawning shell commands */
