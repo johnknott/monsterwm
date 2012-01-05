@@ -569,7 +569,8 @@ void mousemotion(const Arg *arg) {
 
 /* each window should cover all the available screen space */
 void monocle(int hh, int cy) {
-    for (client *c=head; c; c=c->next) if (!ISFFT(c)) XMoveResizeWindow(dis, c->win, 0, cy, ww, hh);
+    for (client *c=head; c; c=c->next) if (!ISFFT(c))
+        XMoveResizeWindow(dis, c->win, 0, cy, ww - 2*BORDER_WIDTH, hh - 2*BORDER_WIDTH);
 }
 
 /* move the current client, to current->next
@@ -968,8 +969,7 @@ void update_current(client *c) {
     XWindowChanges wc;
     for (wc.sibling = (current = c)->win, c=head; c; c=c->next) {
         XSetWindowBorder(dis, c->win, c == current ? win_focus:win_unfocus);
-        XSetWindowBorderWidth(dis, c->win, (!head->next || c->isfullscrn ||
-                                           (mode==MONOCLE && !ISFFT(c))) ? 0:BORDER_WIDTH);
+        XSetWindowBorderWidth(dis, c->win, c->isfullscrn ? 0:BORDER_WIDTH);
         wc.stack_mode = c->isfloating || c->istransient ? Above:Below;
         XConfigureWindow(dis, c->win, CWSibling|CWStackMode, &wc);
         if (CLICK_TO_FOCUS) XGrabButton(dis, Button1, None, c->win, True,
