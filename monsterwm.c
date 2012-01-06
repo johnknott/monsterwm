@@ -149,6 +149,7 @@ static void stack(int h, int y);
 static void swap_master();
 static void switch_mode(const Arg *arg);
 static void tile(void);
+static void showhide();
 static void togglepanel();
 static void update_current(client *c);
 static void unmapnotify(XEvent *e);
@@ -158,7 +159,7 @@ static int xerrorstart();
 
 #include "config.h"
 
-static Bool running = True, showpanel = SHOW_PANEL;
+static Bool running = True, showpanel = SHOW_PANEL, showall = True;
 static int retval = 0;
 static int previous_desktop = 0, current_desktop = 0;
 static int mode = DEFAULT_MODE;
@@ -233,8 +234,8 @@ void change_desktop(const Arg *arg) {
     previous_desktop = current_desktop;
     select_desktop(arg->i);
     tile();
-    if (current) XMapWindow(dis, current->win);
-    for (client *c=head; c; c=c->next) XMapWindow(dis, c->win);
+    if (showall && current) XMapWindow(dis, current->win);
+    for (client *c=head; c && showall; c=c->next) XMapWindow(dis, c->win);
     update_current(current);
     select_desktop(previous_desktop);
     for (client *c=head; c; c=c->next) if (c != current) XUnmapWindow(dis, c->win);
@@ -502,7 +503,7 @@ void maprequest(XEvent *e) {
     select_desktop(cd);
     if (cd == newdsk) {
         tile();
-        XMapWindow(dis, current->win);
+        if (showall) XMapWindow(dis, current->win);
         update_current(current);
         grabbuttons(current);
     } else if (follow) change_desktop(&(Arg){.i = newdsk});
@@ -922,6 +923,13 @@ void tile(void) {
     if (!head) return; /* nothing to arange */
     layout[head->next ? mode : MONOCLE](wh + (showpanel ? 0:PANEL_HEIGHT),
                                 (TOP_PANEL && showpanel ? PANEL_HEIGHT:0));
+}
+
+/* hide or show all windows in current desktop */
+void showhide() {
+    showall = !showall;
+    for (client *c=head; c; c=c->next) (showall) ? XMapWindow(dis, c->win) : XUnmapWindow(dis, c->win);
+    update_current(current);
 }
 
 /* toggle visibility state of the panel */
