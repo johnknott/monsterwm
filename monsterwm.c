@@ -155,6 +155,7 @@ static void togglepanel();
 static void update_current(client *c);
 static void unmapnotify(XEvent *e);
 static client* wintoclient(Window w);
+static void warpcursor(client *c);
 static int xerror(Display *dis, XErrorEvent *ee);
 static int xerrorstart();
 
@@ -993,6 +994,7 @@ void update_current(client *c) {
                 PropModeReplace, (unsigned char *)&current->win, 1);
     XConfigureWindow(dis, current->win, CWSibling|CWStackMode, &wc);
 
+    warpcursor(current);
     XSync(dis, False);
 }
 
@@ -1004,6 +1006,14 @@ client* wintoclient(Window w) {
         for (select_desktop(d), c=head; c && !(found = (w == c->win)); c=c->next);
     select_desktop(cd);
     return c;
+}
+
+/* Warps the mouse pointer to the center of the client c */
+void warpcursor(client *c) {
+    if (!c) return;
+    XWindowAttributes wa;
+    XGetWindowAttributes(dis, c->win, &wa);
+    XWarpPointer(dis, None, c->win, 0, 0, 0, 0, wa.width / 2, wa.height / 2);
 }
 
 /* There's no way to check accesses to destroyed windows, thus those cases are
