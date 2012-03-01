@@ -81,10 +81,12 @@ typedef struct client {
  * head         - the start of the client list
  * current      - the currently highlighted window
  * prevfocus    - the client that previously had focus
+ * showpanel    - the visibility status of the panel
  */
 typedef struct {
     int mode;
     client *head, *current, *prevfocus;
+    Bool showpanel;
 } desktop;
 
 /* define behavior of certain applications
@@ -139,6 +141,7 @@ static void stack(int h, int y);
 static void swap_master();
 static void switch_mode(const Arg *arg);
 static void tile(void);
+static void togglepanel();
 static void update_current(client *c);
 static void unmapnotify(XEvent *e);
 static client* wintoclient(Window w);
@@ -147,7 +150,7 @@ static int xerrorstart();
 
 #include "config.h"
 
-static Bool running = True;
+static Bool running = True, showpanel = SHOW_PANEL;
 static int previous_desktop = 0, current_desktop = 0;
 static int mode = DEFAULT_MODE;
 static int screen, wh, ww; /* window area width/height - screen height minus the panel height */
@@ -692,6 +695,7 @@ void save_desktop(int i) {
     desktops[i].mode        = mode;
     desktops[i].head        = head;
     desktops[i].current     = current;
+    desktops[i].showpanel   = showpanel;
     desktops[i].prevfocus   = prevfocus;
 }
 
@@ -702,6 +706,7 @@ void select_desktop(int i) {
     mode            = desktops[i].mode;
     head            = desktops[i].head;
     current         = desktops[i].current;
+    showpanel       = desktops[i].showpanel;
     prevfocus       = desktops[i].prevfocus;
     current_desktop = i;
 }
@@ -727,7 +732,7 @@ void setup(void) {
     root = RootWindow(dis, screen);
 
     ww = XDisplayWidth(dis,  screen);
-    wh = XDisplayHeight(dis, screen) - PANEL_HEIGHT;
+    wh = XDisplayHeight(dis, screen) - (SHOW_PANEL ? PANEL_HEIGHT:0);
     for (unsigned int i=0; i<DESKTOPS; i++) save_desktop(i);
 
     win_focus = getcolor(FOCUS);
@@ -838,7 +843,14 @@ void switch_mode(const Arg *arg) {
 /* tile all windows of current desktop - call the handler tiling function */
 void tile(void) {
     if (!head) return; /* nothing to arange */
-    layout[head->next ? mode : MONOCLE](wh, TOP_PANEL ? PANEL_HEIGHT : 0);
+    layout[head->next ? mode : MONOCLE](wh + (showpanel ? 0:PANEL_HEIGHT),
+                                (TOP_PANEL && showpanel ? PANEL_HEIGHT:0));
+}
+
+/* toggle visibility state of the panel */
+void togglepanel() {
+    showpanel = !showpanel;
+    tile();
 }
 
 /* windows that request to unmap should lose their
