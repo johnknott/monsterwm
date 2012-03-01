@@ -130,7 +130,7 @@ static void mousemotion(const Arg *arg);
 static void next_win();
 static void prev_win();
 static void propertynotify(XEvent *e);
-static void quit();
+static void quit(const Arg *arg);
 static void removeclient(client *c);
 static void run(void);
 static void save_desktop(int i);
@@ -153,6 +153,7 @@ static int xerrorstart();
 #include "config.h"
 
 static Bool running = True, showpanel = SHOW_PANEL;
+static int retval = 0;
 static int previous_desktop = 0, current_desktop = 0;
 static int mode = DEFAULT_MODE;
 static int screen, wh, ww; /* window area width/height - screen height minus the panel height */
@@ -669,9 +670,10 @@ void propertynotify(XEvent *e) {
     desktopinfo();
 }
 
-/* to quit just stop receiving events
+/* to quit just stop receiving and processing events
  * run() is stopped and control is back to main() */
-void quit() {
+void quit(const Arg *arg) {
+    retval = arg->i;
     running = False;
 }
 
@@ -951,5 +953,5 @@ int main(int argc, char *argv[]) {
     run();
     cleanup();
     XCloseDisplay(dis);
-    return 0;
+    return retval;
 }
