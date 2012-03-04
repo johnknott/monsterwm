@@ -389,13 +389,15 @@ void enternotify(XEvent *e) {
 
 /* tile the windows based on the fibonacci series pattern */
 void fibonacci(int hh, int cy) {
-    int j = -1, cx = 0, cw = ww - BORDER_WIDTH, ch = hh - BORDER_WIDTH;
+    int j = -1, cx = 0, cw = ww - USELESSGAP, ch = hh - USELESSGAP;
     for (client *n, *c=head; c; c=c->next) {
         if (ISFFT(c)) continue; else j++;
         for (n=c->next; n; n=n->next) if (!ISFFT(n)) break;
         if (n) (j&1) ? (ch /= 2)  : (cw /= 2);
         if (j) (j&1) ? (cx += cw) : (cy += ch);
-        XMoveResizeWindow(dis, c->win, cx, cy, cw - BORDER_WIDTH, ch - BORDER_WIDTH);
+        XMoveResizeWindow(dis, c->win, cx + USELESSGAP, cy + USELESSGAP,
+                                       cw - 2*BORDER_WIDTH - USELESSGAP,
+                                       ch - 2*BORDER_WIDTH - USELESSGAP);
     }
 }
 
